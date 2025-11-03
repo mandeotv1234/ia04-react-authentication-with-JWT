@@ -290,8 +290,8 @@ const { data: profile } = useProfileQuery();
 6. Deploy
 
 ### Example Deployed URLs
-- **Backend:** https://your-app-api.onrender.com
-- **Frontend:** https://your-app.vercel.app
+- **Backend:** https://ia04-react-authentication-with-jwt-orcin.vercel.app/
+- **Frontend:** https://ia04-react-authentication-with-jwt.vercel.app/
 
 ---
 
