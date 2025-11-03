@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem('refreshToken');
+    (window as any).__accessToken__ = null;
   };
 
   return (

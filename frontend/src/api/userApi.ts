@@ -1,5 +1,4 @@
 import axios, { AxiosError } from 'axios';
-import type { AxiosRequestConfig } from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -14,7 +13,10 @@ export const api = axios.create({
 
 // Track if we're currently refreshing
 let isRefreshing = false;
-let failedQueue: any[] = [];
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -29,10 +31,10 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // Request interceptor: Attach access token
 api.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config) => {
     // Get token from memory (will be set by AuthContext)
     const token = (window as any).__accessToken__;
-    if (token && config.headers) {
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -54,9 +56,7 @@ api.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
+            originalRequest.headers.Authorization = `Bearer ${token}`;
             return api(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -68,6 +68,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
         // No refresh token, redirect to login
+        isRefreshing = false;
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -85,22 +86,17 @@ api.interceptors.response.use(
         (window as any).__accessToken__ = newAccessToken;
         localStorage.setItem('refreshToken', newRefreshToken);
 
-        // Update original request with new token
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        }
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
         // Process queued requests
         processQueue(null, newAccessToken);
         isRefreshing = false;
 
-        // Retry original request
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
 
-        // Refresh failed, logout
         localStorage.removeItem('refreshToken');
         (window as any).__accessToken__ = null;
         window.location.href = '/login';
@@ -109,7 +105,6 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle other errors
     const enhancedError: any = {
       ...error,
       message: 'Something went wrong. Please try again.',
@@ -124,7 +119,9 @@ api.interceptors.response.use(
       if (responseData?.message) {
         enhancedError.message = typeof responseData.message === 'string'
           ? responseData.message
-          : responseData.message.message || responseData.message;
+          : Array.isArray(responseData.message)
+          ? responseData.message[0]
+          : responseData.message.message || 'Request failed';
       }
     }
 
@@ -132,7 +129,6 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API calls
 export interface RegisterPayload {
   email: string;
   password: string;
@@ -156,6 +152,13 @@ export interface LoginResponse {
   };
 }
 
+export interface UserProfile {
+  _id: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function registerUser(payload: RegisterPayload): Promise<RegisterResponse> {
   const { data } = await api.post<RegisterResponse>('/user/register', payload);
   return data;
@@ -170,7 +173,7 @@ export async function logoutUser(): Promise<void> {
   await api.post('/auth/logout');
 }
 
-export async function getUserProfile(): Promise<any> {
-  const { data } = await api.get('/auth/profile');
+export async function getUserProfile(): Promise<UserProfile> {
+  const { data } = await api.get<UserProfile>('/auth/profile');
   return data;
 }

@@ -1,12 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
-import { useAuth } from '../contexts/AuthContext';
 import { useLogoutMutation } from '../hooks/useLogoutMutation';
 import { useProfileQuery } from '../hooks/useProfileQuery';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const logoutMutation = useLogoutMutation();
   const profileQuery = useProfileQuery();
 
