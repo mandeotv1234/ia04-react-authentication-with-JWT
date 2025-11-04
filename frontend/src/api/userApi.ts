@@ -32,10 +32,12 @@ const processQueue = (error: any, token: string | null = null) => {
 // Request interceptor: Attach access token
 api.interceptors.request.use(
   (config) => {
-    // Get token from memory (will be set by AuthContext)
     const token = (window as any).__accessToken__;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('📤 Request with token:', config.url);
+    } else {
+      console.log('📤 Request without token:', config.url);
     }
     return config;
   },
@@ -48,10 +50,11 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest: any = error.config;
 
-    // If error is 401 and we haven't tried to refresh yet
+    console.log('❌ Request failed:', originalRequest?.url, error.response?.status);
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If already refreshing, queue this request
+        console.log('⏳ Already refreshing, queuing request...');
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -67,17 +70,20 @@ api.interceptors.response.use(
 
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
-        // No refresh token, redirect to login
+        console.log('❌ No refresh token found');
         isRefreshing = false;
         window.location.href = '/login';
         return Promise.reject(error);
       }
 
       try {
-        // Call refresh endpoint
+        console.log('🔄 Attempting token refresh...');
+        
         const { data } = await axios.post(`${API_BASE}/auth/refresh`, {}, {
           headers: { Authorization: `Bearer ${refreshToken}` },
         });
+
+        console.log('✅ Token refreshed successfully');
 
         const newAccessToken = data.accessToken;
         const newRefreshToken = data.refreshToken;
@@ -86,14 +92,23 @@ api.interceptors.response.use(
         (window as any).__accessToken__ = newAccessToken;
         localStorage.setItem('refreshToken', newRefreshToken);
 
+        // Dispatch custom event to update AuthContext
+        window.dispatchEvent(new CustomEvent('token-refreshed', {
+          detail: {
+            user: data.user,
+            accessToken: newAccessToken,
+          }
+        }));
+
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
-        // Process queued requests
         processQueue(null, newAccessToken);
         isRefreshing = false;
 
         return api(originalRequest);
       } catch (refreshError) {
+        console.error('❌ Token refresh failed:', refreshError);
+        
         processQueue(refreshError, null);
         isRefreshing = false;
 

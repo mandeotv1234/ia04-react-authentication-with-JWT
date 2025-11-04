@@ -68,8 +68,8 @@ export default function Navbar() {
                   to="/signup" 
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive('/signup') 
-                      ? 'bg-blue-700 text-white' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      ? 'bg-blue-100 text-white' 
+                      : 'bg-blue-200 text-white hover:bg-blue-300'
                   }`}
                 >
                   Sign Up

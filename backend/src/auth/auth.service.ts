@@ -48,28 +48,36 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(userId: string, refreshToken: string) {
-    const user = await this.userModel.findById(userId);
-    if (!user || !user.refreshToken) {
-      throw new UnauthorizedException('Access Denied');
-    }
-
-    // Verify refresh token
-    const refreshTokenMatches = await bcrypt.compare(refreshToken, user.refreshToken);
-    if (!refreshTokenMatches) {
-      throw new UnauthorizedException('Access Denied');
-    }
-
-    // Generate new tokens - Fix type assertion
-    const userIdString = (user._id as Types.ObjectId).toString();
-    const tokens = await this.generateTokens(userIdString, user.email);
-
-    // Update refresh token hash
-    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
-    await this.userModel.findByIdAndUpdate(user._id, { refreshToken: refreshTokenHash });
-
-    return tokens;
+async refreshTokens(userId: string, refreshToken: string) {
+  const user = await this.userModel.findById(userId);
+  if (!user || !user.refreshToken) {
+    throw new UnauthorizedException('Access Denied');
   }
+
+  // Verify refresh token
+  const refreshTokenMatches = await bcrypt.compare(refreshToken, user.refreshToken);
+  if (!refreshTokenMatches) {
+    throw new UnauthorizedException('Access Denied');
+  }
+
+  // Generate new tokens
+  const userIdString = (user._id as Types.ObjectId).toString();
+  const tokens = await this.generateTokens(userIdString, user.email);
+
+  // Update refresh token hash
+  const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+  await this.userModel.findByIdAndUpdate(user._id, { refreshToken: refreshTokenHash });
+
+  // Return tokens with user info
+  return {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    user: {
+      id: userIdString,
+      email: user.email,
+    },
+  };
+}
 
   async logout(userId: string) {
     await this.userModel.findByIdAndUpdate(userId, { refreshToken: null });
@@ -90,11 +98,11 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: '15m',
+        expiresIn: '30s',
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: '7d',
+        expiresIn: '1m',
       }),
     ]);
 
