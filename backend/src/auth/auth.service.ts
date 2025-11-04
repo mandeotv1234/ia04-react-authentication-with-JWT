@@ -98,11 +98,11 @@ async refreshTokens(userId: string, refreshToken: string) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: '30s',
+        expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: '1m',
+        expiresIn: '7d',
       }),
     ]);
 
