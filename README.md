@@ -79,7 +79,7 @@ ia04-react-authentication-with-JWT/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/ia04-react-authentication-with-JWT.git
+git clone https://github.com/mandeotv1234/ia04-react-authentication-with-JWT.git
 cd ia04-react-authentication-with-JWT
 ```
 
@@ -100,7 +100,7 @@ npm install
 ### 3. Configure environment variables  
 Create a `.env` file in `/backend`:
 ```env
-MONGO_URI=mongodb+srv://donalmun:eqia8yO1F0G3oBVx@tkpm.vufuh.mongodb.net/ex01?retryWrites=true&w=majority&appName=ex01
+MONGO_URI=
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-chars
